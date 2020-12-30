@@ -16,10 +16,14 @@ class UpdateBlenderSignals(QObject):
 
 
 class UpdateBlenderImage(QRunnable):
-    def __init__(self, image_path, label, qt_frame, blender_to_qt_path):
+    def __init__(self, image_path0, image_path1, image_path2, label0, label1, label2, qt_frame, blender_to_qt_path):
         super(UpdateBlenderImage, self).__init__()
-        self.image_path = image_path
-        self.label = label
+        self.image_path0 = image_path0
+        self.image_path1 = image_path1
+        self.image_path2 = image_path2
+        self.label0 = label0
+        self.label1 = label1
+        self.label2 = label2
         self.qt_frame = qt_frame
         self.blender_frame = 0
         self.blender_to_qt_path = blender_to_qt_path
@@ -27,15 +31,18 @@ class UpdateBlenderImage(QRunnable):
 
     @pyqtSlot()
     def run(self):
-        self.pixmap = QPixmap(self.image_path)
         while not os.path.isfile(self.blender_to_qt_path):
             time.sleep(0.25)
         self.get_blender_frame()
         while self.blender_frame != self.qt_frame:
             time.sleep(0.1)
             self.get_blender_frame()
-        self.pixmap = QPixmap(self.image_path)
-        self.label.setPixmap(self.pixmap)
+        self.pixmap0 = QPixmap(self.image_path0)
+        self.pixmap1 = QPixmap(self.image_path1)
+        self.pixmap2 = QPixmap(self.image_path2)
+        self.label0.setPixmap(self.pixmap0)
+        self.label1.setPixmap(self.pixmap1)
+        self.label2.setPixmap(self.pixmap2)
         self.signals.finished.emit()
 
     def get_blender_frame(self):
@@ -57,7 +64,7 @@ class MainWindow(QWidget):
         self.blender_to_qt_dict = {'blender_frame': self.blender_frame}
         with open(self.blender_to_qt_path, 'w+') as f:
             json.dump(self.blender_to_qt_dict, f)
-        self.blender_image_path = os.path.abspath("blender_out.png")
+        self.blender_image_path = os.path.abspath("blender_out")
         self.all_text = []
         self.blender_process = None
         self.window_width = 1200
@@ -68,6 +75,11 @@ class MainWindow(QWidget):
         self.blender_pixmap = None
         self.grid = None
         self.thread_pool = QThreadPool()
+        self.blender_image_0 = QLabel()
+        self.blender_image_1 = QLabel()
+        self.blender_image_2 = QLabel()
+        self.blender_grid = QGridLayout()
+        self.blender_button = QPushButton(f'Update')
         self.update_blender_image = None
 
         self.config = {}
@@ -97,7 +109,14 @@ class MainWindow(QWidget):
         self.qt_to_blender_dict.update({"qt_frame": self.qt_frame})
         with open(self.qt_to_blender_path, 'w+') as f:
             json.dump(self.qt_to_blender_dict, f)
-        self.update_blender_image = UpdateBlenderImage(self.blender_image_path, self.blender_image, self.qt_frame, self.blender_to_qt_path)
+        self.update_blender_image = UpdateBlenderImage(self.blender_image_path+'_0.png',
+                                                       self.blender_image_path+'_1.png',
+                                                       self.blender_image_path+'_2.png',
+                                                       self.blender_image_0,
+                                                       self.blender_image_1,
+                                                       self.blender_image_2,
+                                                       self.qt_frame,
+                                                       self.blender_to_qt_path)
         self.update_blender_image.signals.finished.connect(self.new_update_blender)
         self.thread_pool.start(self.update_blender_image)
 
@@ -106,9 +125,7 @@ class MainWindow(QWidget):
         self.setWindowTitle("Blender Presenter")
         self.grid = QGridLayout(self)
         self.setLayout(self.grid)
-        self.blender_grid = QGridLayout()
         self.grid.addLayout(self.blender_grid, 0, 0)
-        self.blender_button = QPushButton(f'Update')
         self.blender_button.setMaximumSize(self.blender_button.sizeHint())
         self.blender_button.setToolTip('Set Blender Executable Path')
         self.blender_button.clicked.connect(self.on_configure_blender)
@@ -118,14 +135,18 @@ class MainWindow(QWidget):
         self.blender_path_label = QLabel(f"Blender Path: {blender_path}")
         self.blender_grid.addWidget(self.blender_path_label, 0, 1)
 
-        self.blender_image = QLabel()
+
         if not os.path.isfile(self.blender_image_path):
             test_image = np.ones((400, 400, 4), dtype=np.uint8)
             test_image[:, :, 1:] = test_image[:, :, 1:]*255
             im = Image.fromarray(test_image)
-            im.save(self.blender_image_path)
+            im.save(self.blender_image_path+'_0.png')
+            im.save(self.blender_image_path+'_1.png')
+            im.save(self.blender_image_path+'_2.png')
 
-        self.grid.addWidget(self.blender_image, 1, 0)
+        self.grid.addWidget(self.blender_image_0, 1, 0)
+        self.grid.addWidget(self.blender_image_1, 1, 1)
+        self.grid.addWidget(self.blender_image_2, 1, 2)
         self.console_text = QLabel("")
         self.grid.addWidget(self.console_text, 2, 0)
         self.show()

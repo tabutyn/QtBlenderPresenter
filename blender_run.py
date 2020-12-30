@@ -11,7 +11,6 @@ blender_to_qt = sys.argv[4]
 blender_to_qt_dict = {}
 qt_to_blender = sys.argv[5]
 scene = C.scene
-scene.render.filepath = sys.argv[6]
 blender_frame = 0
 qt_frame = 0
 
@@ -28,8 +27,21 @@ while True:
                 print("json miss")
 
         qt_frame = int(qt_to_blender_dict['qt_frame'])
+    stash_location = bpy.data.objects['Camera'].location.copy()
+    bpy.data.objects['Camera'].location.x += 4.0
+    scene.render.filepath = sys.argv[6] + '_0.png'
     O.render.render(write_still=True)
-    bpy.data.objects['Camera'].location.x += 1.0
+    bpy.data.objects['Camera'].location = stash_location
+    bpy.data.objects['Camera'].location.y += 4.0
+    scene.render.filepath = sys.argv[6] + '_1.png'
+    O.render.render(write_still=True)
+    bpy.data.objects['Camera'].location = stash_location
+    bpy.data.objects['Camera'].location.z += 4.0
+    scene.render.filepath = sys.argv[6] + '_2.png'
+    O.render.render(write_still=True)
+    bpy.data.objects['Camera'].location = stash_location
+    bpy.data.objects['Cube']
+
     blender_frame = qt_frame
     print(f"blender_frame: {blender_frame}")
     blender_to_qt_dict.update({'blender_frame': blender_frame})
